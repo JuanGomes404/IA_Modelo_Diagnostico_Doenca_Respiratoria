@@ -18,19 +18,54 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 
-
 import os
-for dirname, _, filenames in os.walk('/archive'):
-    for filename in filenames:
-        print(os.path.join(dirname, filename))
 
-#loading data
+cwd = os.getcwd()  # Get the current working directory (cwd)
+files = os.listdir(cwd)  # Get all the files in that directory
+print("Files in %r: %s" % (cwd, files))
 
-src_dataset = '/archive/dataset.csv'
-
-colunas = []
-train = pd.read_csv(data_train_csv)
-test = pd.read_csv(data_test_csv)
+#Carregar dados
+src_dataset = 'dataset.csv'
+data = pd.read_csv(open(src_dataset), skiprows=0, delimiter=',')
+data.info()
 
 
-print(train.head())
+#removendo espaços em branco
+sx1 = [sx.strip() for sx in list(data.Symptoms.unique()) if sx[0] == " "]
+sx2 = [sx for sx in list(data.Symptoms.unique()) if sx[0] != " "]
+sx = sx1 + sx2
+sx = [s.lower() for s in sx]
+print(sx, len(sx))
+
+
+# Dividir variáveis
+array = data.values
+X = array[:, 0:8].astype(float)
+Y = array[:, 8]
+
+# Divisão treino/teste
+test_size = 0.20
+seed = 7
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=test_size, random_state=seed)
+
+models = [
+    ("LR", LogisticRegression(solver='newton-cg')),
+    ("KNN", KNeighborsClassifier()),
+    ("CART", DecisionTreeClassifier()),
+    ("NB", GaussianNB()),
+    ("SVM", SVC())
+]
+
+np.random.seed(7)
+num_folds = 10
+scoring = 'accuracy'
+results = []
+names = []
+for name, model in models:
+    kFold = KFold(n_splits=num_folds)
+    cv_results = cross_val_score(model,X_train,Y_train,cv=kfold,scoring=scoring)
+    results.append(cv_results)
+    names.append(name)
+    msg = '%s: %f (%f)' % (name, cv_results.mean(), cv_results.std())
+    print(msg)
+
